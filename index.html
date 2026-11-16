@@ -9,8 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=20260906_yu1">
-  <link rel="stylesheet" href="./style.css?v=20260906_yu1">
+  <link rel="stylesheet" href="./style.css?v=20261117_ui1">
   <!-- SheetJS for Excel (.xlsx) Export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -20,13 +19,14 @@
     <header class="header">
       <div class="header-content">
         <div class="brand">
-          <div class="brand-icon">🎓</div>
+          <div class="brand-icon" aria-hidden="true">YU</div>
           <div class="brand-text">
-            <h1>전공 평점 자동 계산기</h1>
-            <p>영남대 포털 자동 수집 · 학년별 전공 성적 분석</p>
+            <span class="eyebrow">YEUNGNAM UNIVERSITY · GPA WORKSPACE</span>
+            <h1>내 성적, 한눈에 정리하기</h1>
+            <p>성적표를 붙여넣거나 과목을 입력하면 전공·전체 평점을 바로 계산합니다.</p>
             <div class="security-notice-badge">
               <i class="fa-solid fa-shield-halved"></i>
-              <span>아이디와 비밀번호는 서버에 일절 저장되지 않으며 로그인 완료 후 즉시 폐기됩니다. (전체 소스코드는 <a href="https://github.com/ryusb2295/yu-gpa-calculator" target="_blank" rel="noopener noreferrer" class="security-gh-link"><i class="fa-brands fa-github"></i> GitHub</a>에서 확인이 가능합니다)</span>
+              <span>붙여넣기와 직접 입력은 브라우저에서 처리됩니다. 자동 수집은 별도 서버에 로그인 정보를 전송합니다.</span>
             </div>
           </div>
         </div>
@@ -67,20 +67,21 @@
     <main class="main-layout">
       <!-- Left: Input Panel -->
       <section class="input-panel">
+        <div class="panel-heading"><span class="section-index">01 / INPUT</span><h2>성적 가져오기</h2><p>가장 쉬운 방법을 선택하세요. 먼저 예시 데이터로 화면을 살펴볼 수도 있습니다.</p></div>
         <div class="tab-header">
-          <button type="button" class="tab-btn active" data-tab="tab-crawl">
-            <i class="fa-solid fa-robot"></i> 자동 수집
-          </button>
-          <button type="button" class="tab-btn" data-tab="tab-paste">
+          <button type="button" class="tab-btn active" data-tab="tab-paste">
             <i class="fa-solid fa-paste"></i> 붙여넣기
           </button>
           <button type="button" class="tab-btn" data-tab="tab-manual">
             <i class="fa-solid fa-pen-to-square"></i> 직접 입력
           </button>
+          <button type="button" class="tab-btn" data-tab="tab-crawl">
+            <i class="fa-solid fa-robot"></i> 자동 수집
+          </button>
         </div>
 
         <!-- Tab 1: Crawling -->
-        <div class="tab-content active" id="tab-crawl">
+        <div class="tab-content" id="tab-crawl">
           <form id="crawl-form">
             <div class="form-group">
               <label for="portal_url"><i class="fa-solid fa-link"></i> 포털 로그인 주소 (URL)</label>
@@ -150,7 +151,8 @@
         </div>
 
         <!-- Tab 2: Text Paste -->
-        <div class="tab-content" id="tab-paste">
+        <div class="tab-content active" id="tab-paste">
+          <p class="input-intro">학교 포털의 성적 표를 복사해서 아래에 붙여넣으세요. 인식된 과목을 오른쪽에서 확인하고 수정할 수 있습니다.</p>
           <div class="form-group">
             <label for="paste-text"><i class="fa-solid fa-clipboard"></i> 성적표 텍스트 / 표 붙여넣기</label>
             <textarea id="paste-text" rows="8" placeholder="학교 포털 성적 조회 페이지에서 전체 성적 표를 복사(Ctrl+C)하여 여기에 붙여넣으세요 (Ctrl+V)...&#10;&#10;예시:&#10;2025  1  전공핵심  INC002  논리회로  3  B+  3.5&#10;2025  2  전공선택  INC013  컴퓨터네트워크  3  C+  2.5"></textarea>
@@ -222,6 +224,7 @@
 
       <!-- Right Column: Dashboard & Grade Summary -->
       <section class="dashboard">
+        <div class="panel-heading result-heading"><span class="section-index">02 / RESULTS</span><h2>계산 결과</h2><p>입력한 과목을 기준으로 계산합니다. 공식 성적표와 대조해 주세요.</p></div>
         <!-- Top Metrics Cards -->
         <div class="metrics-grid">
           <div class="metric-card highlight-card">

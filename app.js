@@ -63,7 +63,7 @@ function updateServerBadge() {
 }
 
 function getApiUrl(endpoint) {
-  let serverUrl = autoDetectedBackendUrl || localStorage.getItem("yu_gpa_backend_url") || "";
+  let serverUrl = localStorage.getItem("yu_gpa_backend_url") || autoDetectedBackendUrl || "";
   serverUrl = serverUrl.trim().replace(/\/+$/, "");
 
   if (serverUrl) {
@@ -134,6 +134,7 @@ function initServerConfig() {
         localStorage.removeItem("yu_gpa_backend_url");
         alert("ℹ️ 기본 로컬 상대 경로로 재설정되었습니다.");
       }
+      updateServerBadge();
       closeDialog();
     });
   }
@@ -331,7 +332,7 @@ let isCrawling = false;
 
 window.handleCrawl = async function() {
   if (isCrawling) return; // Prevent double execution
-  const configuredBackend = autoDetectedBackendUrl || localStorage.getItem("yu_gpa_backend_url") || "";
+  const configuredBackend = localStorage.getItem("yu_gpa_backend_url") || autoDetectedBackendUrl || "";
   if (!configuredBackend && location.hostname.endsWith("github.io")) {
     alert("GitHub Pages에서는 자동 수집용 Python 백엔드 주소가 필요합니다. 서버 연동 버튼에서 주소를 설정하거나, 붙여넣기 탭을 이용해 주세요.");
     return;

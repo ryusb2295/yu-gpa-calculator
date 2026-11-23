@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>전공 평점 계산 | 영남대학교</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="urp.css?v=20261123_transfer">
+  <link rel="stylesheet" href="urp.css?v=20261123_inferredmajor">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script defer src="app.js?v=20261123_crosscheck"></script>
+  <script defer src="app.js?v=20261123_inferredmajor"></script>
   <script defer src="shell.js?v=20261123_full"></script>
 </head>
 <body>
@@ -133,6 +133,7 @@
 
             <section class="table-card" id="table-card" aria-labelledby="course-title">
               <div class="section-heading"><h2 id="course-title">과목 성적 목록 (<span id="course-count">0</span>)</h2><div class="section-actions"><button type="button" class="btn btn-sm" id="btn-mark-all-major">전체 전공으로 지정</button><button type="button" class="btn btn-sm btn-danger" id="btn-clear-all">전체 삭제</button></div></div>
+              <p class="classification-note">이수구분이 없는 성적 과목은 전공으로 추정합니다. 실제 이수구분이 다르면 전공 여부를 눌러 수정하세요. 편입 인정 P학점은 추정 대상에서 제외합니다.</p>
               <div class="table-responsive"><table class="course-table"><thead><tr><th>전공 여부</th><th>과목명</th><th>이수학점</th><th>성적</th><th>이수구분</th><th>관리</th></tr></thead><tbody id="course-table-body"><tr class="empty-row"><td colspan="6">등록된 과목이 없습니다.</td></tr></tbody></table></div>
             </section>
 

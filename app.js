@@ -230,8 +230,13 @@ function parseYuTextLocal(rawText) {
     const credits = Number(credit);
     if (!name || !Number.isFinite(credits) || credits <= 0 || !validGrades.has(grade)) continue;
     const classMap={"전필":"전공필수","전선":"전공선택","교필":"교양필수","교선":"교양선택","일선":"일반선택"};
-    classification=classMap[classification] || classification || (/편입인정/.test(name) || /편입/.test(semester) ? "편입인정학점" : "미분류");
-    const isMajor=/전공|전필|전선/.test(classification);
+    classification = classMap[classification] || classification;
+    if (!classification) {
+      classification = /편입인정/.test(name) || /편입/.test(semester)
+        ? "편입인정학점"
+        : (grade === "P" || grade === "NP" ? "이수구분 미확인" : "전공 추정");
+    }
+    const isMajor = /전공|전필|전선/.test(classification) && classification !== "편입인정학점";
     courses.push({id:Math.random().toString(36).slice(2,9),name,credits,grade,is_major:isMajor,classification,year_semester:`${year}년 ${normalizeYuSemester(semester)}`,code,retake});
   }
   return courses;
@@ -521,10 +526,13 @@ window.handleCrawl = async function() {
 // Add Courses to State
 function addCourses(newCourses) {
   const processed = newCourses.map(c => {
-    const cls = c.classification || c.type || "";
+    let cls = c.classification || c.type || "";
     const name = c.name || "";
+    const missingClass = !cls || cls === "미분류" || cls === "이수구분 미확인";
+    if (missingClass && /편입인정/.test(name)) cls = "편입인정학점";
+    else if (missingClass && c.grade !== "P" && c.grade !== "NP") cls = "전공 추정";
     // Any item containing '전공', '전필', '전선' is strictly treated as Major
-    const isMajor = typeof c.is_major === "boolean" ? c.is_major :
+    const isMajor = cls === "전공 추정" ? true : typeof c.is_major === "boolean" ? c.is_major :
                     cls.includes("전공") || cls.includes("전필") || cls.includes("전선") ||
                     name.includes("전공필수") || name.includes("전공선택");
     return {

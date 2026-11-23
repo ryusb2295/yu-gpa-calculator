@@ -105,8 +105,13 @@ def make_course(year: str, semester: str, classification: str, code: str, name: 
         return None
     classification = CLASS_MAP.get(classification.strip(), classification.strip())
     if not classification:
-        classification = "편입인정학점" if "편입인정" in name or "편입" in semester else "미분류"
-    is_major = any(word in classification for word in MAJOR_WORDS)
+        if "편입인정" in name or "편입" in semester:
+            classification = "편입인정학점"
+        elif grade not in {"P", "NP"}:
+            classification = "전공 추정"
+        else:
+            classification = "이수구분 미확인"
+    is_major = any(word in classification for word in MAJOR_WORDS) and classification != "편입인정학점"
     return Course(
         id=str(uuid.uuid4())[:8], name=name.strip(), credits=credits, grade=grade,
         is_major=is_major, classification=classification,

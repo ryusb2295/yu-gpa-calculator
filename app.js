@@ -291,6 +291,8 @@ function initForms() {
     if (e) e.preventDefault();
     const nameInput = document.getElementById("m-name");
     const name = nameInput ? nameInput.value.trim() : "";
+    const year = Number(document.getElementById("m-year").value);
+    const semester = document.getElementById("m-semester").value;
     const credits = parseFloat(document.getElementById("m-credits").value);
     const grade = document.getElementById("m-grade").value;
     const classification = document.getElementById("m-class").value;
@@ -300,6 +302,11 @@ function initForms() {
       alert("과목명을 입력해 주세요!");
       return;
     }
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      alert("수강연도를 네 자리로 입력해 주세요.");
+      document.getElementById("m-year").focus();
+      return;
+    }
 
     const newCourse = {
       id: Math.random().toString(36).substring(2, 9),
@@ -307,7 +314,8 @@ function initForms() {
       credits,
       grade,
       is_major: isMajor,
-      classification
+      classification,
+      year_semester: `${year}년 ${semester}`
     };
 
     addCourses([newCourse]);

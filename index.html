@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>전공 평점 계산 | 영남대학교</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="urp.css?v=20261123_transferyear">
+  <link rel="stylesheet" href="urp.css?v=20261123_urpsummary">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script defer src="app.js?v=20261123_transferyear"></script>
+  <script defer src="app.js?v=20261123_urpsummary"></script>
   <script defer src="shell.js?v=20261123_full"></script>
 </head>
 <body>
@@ -127,6 +127,14 @@
                 <input type="file" id="file-import" accept=".json" class="hidden">
               </div>
             </div>
+
+            <section class="urp-summary-card hidden" id="urp-summary-section" aria-labelledby="urp-summary-title">
+              <div class="section-heading"><h2 id="urp-summary-title">URP 성적 조회 결과</h2><p>포털에 표시된 취득학점과 평점을 그대로 보여줍니다.</p></div>
+              <div class="urp-summary-grid">
+                <div><h3>년도/학기별 누적 성적조회</h3><div class="table-responsive"><table class="course-table"><thead><tr><th>년도/학기</th><th>취득</th><th>평점평균</th></tr></thead><tbody id="urp-period-body"></tbody></table></div></div>
+                <div><h3>이수구분별 취득학점</h3><div class="table-responsive"><table class="course-table"><thead><tr><th>이수구분</th><th>총취득학점</th></tr></thead><tbody id="urp-category-body"></tbody></table></div></div>
+              </div>
+            </section>
 
             <section class="year-breakdown-card" id="year-breakdown-card" aria-labelledby="year-title">
               <div class="section-heading"><h2 id="year-title">학년별 전공 분석</h2><div class="year-start-settings"><label class="year-start-control" for="start-year-select">시작 학년 <select id="start-year-select"><option value="1">1학년 (신입학)</option><option value="2">2학년</option><option value="3" selected>3학년 (편입학)</option><option value="4">4학년</option></select></label><label class="year-start-control" for="start-calendar-year">시작 연도 <input id="start-calendar-year" type="number" min="2000" max="2100" placeholder="자동"></label><span id="start-calendar-year-hint" class="year-start-hint"></span></div></div>

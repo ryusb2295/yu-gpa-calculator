@@ -187,6 +187,54 @@ def extract_yu_courses(html: str) -> List[Course]:
     return courses
 
 
+def extract_yu_summary(html: str) -> dict:
+    """Read the two URP summary grids without assuming a fixed table ID."""
+    soup = BeautifulSoup(html, "html.parser")
+    periods = []
+    categories = []
+    mode = None
+    for row in soup.select("tr"):
+        cells = [cell.get_text(" ", strip=True) for cell in row.select(":scope > th, :scope > td")]
+        normalized = [re.sub(r"\s+", "", cell) for cell in cells]
+        if any("년도/학기" in cell or "연도/학기" in cell for cell in normalized) and any("평점평균" in cell for cell in normalized):
+            mode = "period"
+            continue
+        if any("이수구분" in cell for cell in normalized) and any("취득학점" in cell for cell in normalized):
+            mode = "category"
+            continue
+        if mode == "period" and len(cells) >= 3:
+            period = cells[0].replace(" ", "")
+            credits = re.fullmatch(r"\d+(?:\.\d+)?", cells[1].replace(",", ""))
+            gpa = re.search(r"\d+(?:\.\d+)?", cells[2])
+            if re.fullmatch(r"20\d{2}[-년](?:[12]|여름|겨울|편입\d+).*", period) and credits and gpa:
+                periods.append({"period": period, "earned_credits": float(cells[1].replace(",", "")), "gpa": float(gpa.group())})
+                continue
+            mode = None
+        if mode == "category" and len(cells) >= 2:
+            credits = re.fullmatch(r"\d+(?:\.\d+)?", cells[1].replace(",", ""))
+            if cells[0] and credits:
+                categories.append({"classification": cells[0], "credits": float(cells[1].replace(",", ""))})
+                continue
+            mode = None
+    return {"periods": periods, "categories": categories}
+
+
+def reconcile_major_courses(courses: List[Course], summary: dict) -> bool:
+    """Confirm all non-transfer earned courses as major only when totals match."""
+    major_credits = sum(item["credits"] for item in summary["categories"] if item["classification"].startswith("전공"))
+    if major_credits <= 0:
+        return False
+    eligible = [c for c in courses if not c.classification.startswith("편입인정학점") and c.grade not in {"F", "NP"}]
+    eligible_credits = sum(c.credits for c in eligible)
+    if abs(eligible_credits - major_credits) > 0.001:
+        return False
+    for course in eligible:
+        course.is_major = True
+        if course.classification in {"전공 추정", "이수구분 미확인", "미분류"}:
+            course.classification = "전공 (취득학점 합계 확인)"
+    return True
+
+
 async def click_grade_menu(page, log):
     # WebSquare menus are hierarchical: clicking the category again closes it.
     async def click_visible(label):
@@ -237,6 +285,21 @@ async def collect_visible_courses(page):
     for course in courses:
         unique[(course.year_semester, course.code, course.name)] = course
     return list(unique.values())
+
+
+async def collect_visible_summary(page):
+    periods = {}
+    categories = {}
+    for frame in page.frames:
+        try:
+            summary = extract_yu_summary(await frame.content())
+            for item in summary["periods"]:
+                periods[item["period"]] = item
+            for item in summary["categories"]:
+                categories[item["classification"]] = item
+        except Exception:
+            continue
+    return {"periods": list(periods.values()), "categories": list(categories.values())}
 
 
 async def run_crawler_core(req: CrawlRequest, emit_log=None):
@@ -290,13 +353,23 @@ async def run_crawler_core(req: CrawlRequest, emit_log=None):
                     if courses:
                         break
                     await asyncio.sleep(2)
+            summary = await collect_visible_summary(page)
+            for _ in range(4):
+                if summary["categories"]:
+                    break
+                await asyncio.sleep(1)
+                summary = await collect_visible_summary(page)
+            if reconcile_major_courses(courses, summary):
+                await log("      - URP 전공 취득학점 합계와 과목 학점 합계가 일치하여 전공 여부를 확인했습니다.")
+            elif summary["categories"]:
+                await log("      - URP 전공 취득학점 합계와 과목 학점 합계가 달라 개별 이수구분을 추정값으로 남겼습니다.")
             await browser.close()
             if not courses:
                 message = "성적 행을 찾지 못했습니다. 현재 화면의 성적표 구조를 확인해야 합니다."
                 await log(f"⚠️ {message}")
                 return {"success": False, "logs": logs, "courses": [], "error": message}
             await log(f"✅ {len(courses)}개 과목을 수집했습니다.")
-            return {"success": True, "logs": logs, "courses": [c.model_dump() for c in courses], "message": f"{len(courses)}개 과목 수집 완료"}
+            return {"success": True, "logs": logs, "courses": [c.model_dump() for c in courses], "summary": summary, "message": f"{len(courses)}개 과목 수집 완료"}
     except Exception as exc:
         await log(f"❌ 자동 수집 오류: {exc}")
         return {"success": False, "logs": logs, "courses": [], "error": str(exc)}

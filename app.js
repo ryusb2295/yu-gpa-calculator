@@ -1,6 +1,7 @@
 // State management
 let state = {
   courses: [],
+  urpSummary: null,
   scale: 4.5,
   startYear: Number(localStorage.getItem("yu_gpa_start_year")) || 3,
   startCalendarYear: Number(localStorage.getItem("yu_gpa_start_calendar_year")) || 0,
@@ -491,6 +492,7 @@ window.handleCrawl = async function() {
         }
         if (finalResult.courses && finalResult.courses.length > 0) {
           state.courses = [];
+          state.urpSummary = finalResult.summary || null;
           addCourses(finalResult.courses);
         }
       } else {
@@ -527,6 +529,7 @@ window.handleCrawl = async function() {
         }
         if (data.courses && data.courses.length > 0) {
           state.courses = [];
+          state.urpSummary = data.summary || null;
           addCourses(data.courses);
         }
       } else {
@@ -602,6 +605,7 @@ function initToolbar() {
       if (e) e.preventDefault();
       if (confirm("등록된 모든 과목 성적을 삭제하시겠습니까?")) {
         state.courses = [];
+        state.urpSummary = null;
         renderApp();
       }
     });
@@ -733,6 +737,7 @@ function initToolbar() {
           const imported = JSON.parse(event.target.result);
           if (Array.isArray(imported)) {
             state.courses = [];
+            state.urpSummary = null;
             addCourses(imported);
             alert("🎉 성적 데이터를 성공적으로 불러왔습니다.");
           }
@@ -788,8 +793,24 @@ function initSimulator() {
   });
 }
 
+function renderUrpSummary() {
+  const section = document.getElementById("urp-summary-section");
+  const summary = state.urpSummary;
+  if (!section) return;
+  const periods = summary?.periods || [];
+  const categories = summary?.categories || [];
+  section.classList.toggle("hidden", !periods.length && !categories.length);
+  document.getElementById("urp-period-body").innerHTML = periods.map(item =>
+    `<tr><td>${escapeHtml(item.period)}</td><td>${item.earned_credits}</td><td>${Number(item.gpa).toFixed(2)} / 4.5</td></tr>`
+  ).join("") || '<tr><td colspan="3">조회된 자료가 없습니다.</td></tr>';
+  document.getElementById("urp-category-body").innerHTML = categories.map(item =>
+    `<tr><td>${escapeHtml(item.classification)}</td><td>${item.credits}</td></tr>`
+  ).join("") || '<tr><td colspan="2">조회된 자료가 없습니다.</td></tr>';
+}
+
 // Render Application UI & Calculate GPA
 function renderApp() {
+  renderUrpSummary();
   const gradeMap = GRADE_MAPS[state.scale] || GRADE_MAPS[4.5];
 
   let majorPoints = 0;

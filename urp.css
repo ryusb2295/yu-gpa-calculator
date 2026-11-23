@@ -133,6 +133,10 @@ table { width: 100%; border-collapse: collapse; }
 .toolbar-card label { font-size: 12px; font-weight: 600; }
 .toolbar-card select { width: auto; }
 .toolbar-right { display: flex; flex-wrap: wrap; gap: 5px; margin-left: auto; }
+.urp-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.urp-summary-grid h3 { margin: 0 0 5px; color: var(--accent); font-size: 12px; }
+.urp-summary-grid .course-table { min-width: 0; }
+.urp-summary-grid td { text-align: center; }
 .year-grid { display: grid; gap: 10px; }
 .empty-year-state { padding: 13px 8px; border: 1px solid var(--line); color: var(--ink-soft); font-size: 12px; }
 .year-card-full { border-top: 2px solid var(--rule); }
@@ -168,6 +172,7 @@ table { width: 100%; border-collapse: collapse; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
 
 @media (max-width: 760px) {
+  .urp-summary-grid { grid-template-columns: 1fr; }
   .urp-header-note { display: none; }
   .urp-sidebar { position: absolute; z-index: 20; top: 0; bottom: 0; box-shadow: 4px 0 12px rgba(0,0,0,.12); }
   .app-container.nav-toggled .urp-sidebar { display: none; }

@@ -38,6 +38,10 @@ function gradePointsForGpa(grade, gradeMap) {
   return gradeMap[grade];
 }
 
+function formatGpa(value) {
+  return (Math.floor((value + Number.EPSILON) * 100) / 100).toFixed(2);
+}
+
 // Dynamic Backend API URL Resolver for GitHub Pages & Cloudflare Tunnel
 let autoDetectedBackendUrl = "";
 
@@ -654,7 +658,7 @@ function initToolbar() {
 
       yearGroupList.forEach(data => {
         const gpa = data.majorCreditsGpa > 0
-          ? (data.majorPoints / data.majorCreditsGpa).toFixed(2)
+          ? formatGpa(data.majorPoints / data.majorCreditsGpa)
           : "0.00";
 
         lines.push("");
@@ -678,7 +682,7 @@ function initToolbar() {
           }
         }
       });
-      const totalGpa = totalMajorCredits > 0 ? (totalMajorPoints / totalMajorCredits).toFixed(2) : "0.00";
+      const totalGpa = totalMajorCredits > 0 ? formatGpa(totalMajorPoints / totalMajorCredits) : "0.00";
 
       lines.push("");
       lines.push(`총 전공 평점: ${totalGpa} / ${state.scale.toFixed(2)}  (반영학점 ${totalMajorCredits}학점)`);
@@ -846,8 +850,8 @@ function renderApp() {
   const overallGpa = overallCreditsForGpa > 0 ? (overallPoints / overallCreditsForGpa) : 0;
 
   // Update UI Counters
-  document.getElementById("val-major-gpa").textContent = majorGpa.toFixed(2);
-  document.getElementById("val-overall-gpa").textContent = overallGpa.toFixed(2);
+  document.getElementById("val-major-gpa").textContent = formatGpa(majorGpa);
+  document.getElementById("val-overall-gpa").textContent = formatGpa(overallGpa);
 
   document.getElementById("val-major-credits-info").innerHTML = `전공 이수: <strong>${majorTotalCredits}</strong> 학점 (평점 반영 ${majorCreditsForGpa}학점)`;
   document.getElementById("val-overall-credits-info").innerHTML = `총 이수: <strong>${overallTotalCredits}</strong> 학점 (평점 반영 ${overallCreditsForGpa}학점)`;
@@ -1093,8 +1097,8 @@ function renderYearBreakdown() {
   grid.style.gridTemplateColumns = "1fr";
 
   grid.innerHTML = yearGroupList.map(data => {
-    const majGpa = data.majorCreditsGpa > 0 ? (data.majorPoints / data.majorCreditsGpa).toFixed(2) : "0.00";
-    const overallGpa = data.overallCreditsGpa > 0 ? (data.overallPoints / data.overallCreditsGpa).toFixed(2) : "0.00";
+    const majGpa = data.majorCreditsGpa > 0 ? formatGpa(data.majorPoints / data.majorCreditsGpa) : "0.00";
+    const overallGpa = data.overallCreditsGpa > 0 ? formatGpa(data.overallPoints / data.overallCreditsGpa) : "0.00";
 
     // 전공 과목 테이블 행 생성
     const courseRows = data.majorCourses.length > 0
@@ -1254,8 +1258,8 @@ function exportToExcel() {
     }
   });
 
-  const majorGpa = majorCreditsForGpa > 0 ? (majorPoints / majorCreditsForGpa).toFixed(2) : "0.00";
-  const overallGpa = overallCreditsForGpa > 0 ? (overallPoints / overallCreditsForGpa).toFixed(2) : "0.00";
+  const majorGpa = majorCreditsForGpa > 0 ? formatGpa(majorPoints / majorCreditsForGpa) : "0.00";
+  const overallGpa = overallCreditsForGpa > 0 ? formatGpa(overallPoints / overallCreditsForGpa) : "0.00";
 
   // Helper to normalize classification into 5 standard types:
   // 교양선택, 교양필수, 전공선택, 전공필수, 일반선택
@@ -1314,7 +1318,7 @@ function exportToExcel() {
   const sheet2Rows = [sheet2Header];
 
   yearGroupList.forEach(g => {
-    const gpa = g.majorCreditsGpa > 0 ? (g.majorPoints / g.majorCreditsGpa).toFixed(2) : "0.00";
+    const gpa = g.majorCreditsGpa > 0 ? formatGpa(g.majorPoints / g.majorCreditsGpa) : "0.00";
     const courseListStr = g.majorCourses.map(mc => `${mc.name}(${mc.credits}학점/${mc.grade})`).join(", ");
     sheet2Rows.push([
       g.yearLabel,

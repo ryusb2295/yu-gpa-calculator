@@ -38,6 +38,16 @@ function gradePointsForGpa(grade, gradeMap) {
   return gradeMap[grade];
 }
 
+function isTransferCredit(course) {
+  return /편입인정/.test(course.classification || "") || /편입인정/.test(course.name || "");
+}
+
+function courseTypeLabel(course) {
+  if (isTransferCredit(course)) return "편입인정";
+  if (course.is_major) return "전공";
+  return /교양|교필|교선/.test(course.classification || "") ? "교양" : "기타";
+}
+
 function formatGpa(value) {
   return (Math.floor((value + Number.EPSILON) * 100) / 100).toFixed(2);
 }
@@ -567,7 +577,7 @@ function addCourses(newCourses) {
     if (missingClass && /편입인정/.test(name)) cls = "편입인정학점";
     else if (missingClass && c.grade !== "P" && c.grade !== "NP") cls = "전공 추정";
     // Any item containing '전공', '전필', '전선' is strictly treated as Major
-    const isMajor = cls === "전공 추정" ? true : typeof c.is_major === "boolean" ? c.is_major :
+    const isMajor = isTransferCredit({ classification: cls, name }) ? false : cls === "전공 추정" ? true : typeof c.is_major === "boolean" ? c.is_major :
                     cls.includes("전공") || cls.includes("전필") || cls.includes("전선") ||
                     name.includes("전공필수") || name.includes("전공선택");
     return {
@@ -618,7 +628,7 @@ function initToolbar() {
   const btnMarkAllMajor = document.getElementById("btn-mark-all-major");
   if (btnMarkAllMajor) {
     btnMarkAllMajor.addEventListener("click", () => {
-      state.courses = state.courses.map(c => ({ ...c, is_major: true }));
+      state.courses = state.courses.map(c => ({ ...c, is_major: !isTransferCredit(c) }));
       renderApp();
     });
   }
@@ -880,8 +890,8 @@ function renderApp() {
   tbody.innerHTML = state.courses.map(c => `
     <tr>
       <td>
-        <button type="button" class="toggle-major-btn ${c.is_major ? 'is-major' : 'not-major'}" onclick="toggleMajor('${c.id}')">
-          ${c.is_major ? '전공' : '교양'}
+        <button type="button" class="toggle-major-btn ${c.is_major ? 'is-major' : 'not-major'}" onclick="toggleMajor('${c.id}')" ${isTransferCredit(c) ? 'disabled title="편입인정학점은 전공 평점에서 제외됩니다"' : ''}>
+          ${courseTypeLabel(c)}
         </button>
       </td>
       <td><strong>${escapeHtml(c.name)}</strong></td>
@@ -1170,7 +1180,7 @@ function renderYearBreakdown() {
 
 // Action helpers
 window.toggleMajor = function(id) {
-  state.courses = state.courses.map(c => c.id === id ? { ...c, is_major: !c.is_major } : c);
+  state.courses = state.courses.map(c => c.id === id && !isTransferCredit(c) ? { ...c, is_major: !c.is_major } : c);
   renderApp();
 };
 

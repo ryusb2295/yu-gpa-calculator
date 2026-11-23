@@ -1,17 +1,16 @@
 # 영남대학교 전공 평점 자동 계산기 (YU GPA Calculator)
 
-영남대학교 학생종합정보시스템 성적표 형식에 맞춘 전체·전공 평점 분석 웹 애플리케이션입니다. 원본 `mintluv/kau_major_credit`의 화면 구성과 기능을 영남대학교용으로 이식했습니다.
+영남대학교 URP 성적을 바탕으로 전체·전공 평점과 학년별 이수 현황을 확인하는 비공식 계산기입니다.
 
 ## 주요 기능
 
-1. 영남대학교 성적조회 표 붙여넣기 자동 분석
-2. 전공핵심·전공선택·전공필수 집계와 편입인정학점 분리
-3. 전체·전공 평점 및 이수연차별 분석
-4. 과목 추가·수정, 목표 전공 평점 계산
+1. URP 성적조회 표 자동 수집 시도 및 성적표 텍스트 붙여넣기
+2. URP의 학기별 누적 성적과 이수구분별 취득학점 표시
+3. 전체·전공 평점과 편입 후 3·4학년 이수 현황 분석
+4. 과목 추가·수정, 전공 여부 변경, 목표 전공 평점 계산
 5. Excel, 텍스트 요약, JSON 백업 내보내기
-6. 로컬 FastAPI·Playwright 백엔드 실행 시 포털 자동 수집 시도
 
-GitHub Pages에서는 붙여넣기·직접 입력·계산·내보내기가 브라우저 안에서 작동합니다. 자동 수집은 브라우저 자동화를 실행할 별도 백엔드가 필요합니다.
+GitHub Pages에서는 붙여넣기·직접 입력·계산·내보내기가 브라우저에서 작동합니다. URP 자동 수집에는 별도로 실행한 FastAPI·Playwright 백엔드가 필요합니다. 로그인 화면이나 성적조회 화면의 구조가 달라지면 자동 수집에 실패할 수 있습니다.
 
 ## GitHub Pages
 
@@ -19,16 +18,16 @@ https://ryusb2295.github.io/yu-gpa-calculator/
 
 ## 로컬 백엔드 실행
 
-```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+PowerShell에서 프로젝트 폴더로 이동해 실행합니다.
+
+```powershell
+cd C:\Projects\yu-gpa-calculator
 python -m pip install -r requirements.txt
 python -m playwright install chromium
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
-브라우저에서 `http://127.0.0.1:8000`을 엽니다.
+브라우저에서 `http://127.0.0.1:8000`을 엽니다. 가상환경을 사용하는 경우에는 먼저 가상환경을 활성화한 뒤 같은 명령을 실행하세요.
 
 ## 계산 기준
 
@@ -40,7 +39,7 @@ python -m uvicorn app:app --host 127.0.0.1 --port 8000
 - 학년별 분석은 편입 인정 학점의 연도를 시작 연도로 잡아 3학년·4학년을 표시합니다. 시작 연도가 다르면 화면에서 직접 바꿀 수 있습니다. 편입 이전 성적과 편입 인정 학점은 별도 묶음으로 표시합니다.
 - 영남대는 전부(과)·부복수전공 등에 따라 이수구분이 변동될 수 있다고 안내합니다. 최종 이수구분은 URP에서 확인하세요. [영남대 성적관리 안내](https://www.yu.ac.kr/main/bachelor/grade.do)
 
-- A+ 4.5, A/A0 4.0, B+ 3.5, B/B0 3.0, C+ 2.5, C/C0 2.0, D+ 1.5, D/D0 1.0, F 0.0
+- 4.5 만점 기준: A+ 4.5, A/A0 4.0, B+ 3.5, B/B0 3.0, C+ 2.5, C/C0 2.0, D+ 1.5, D/D0 1.0, F 0.0
 - P·NP와 편입인정학점은 평점 계산에서 제외
 - 기본 종합성적 기준에서는 F를 취득학점과 평점 계산에서 제외합니다. 학기성적 기준을 선택하면 F를 0점으로 평점 계산에 포함합니다. [영남대 성적관리 안내](https://www.yu.ac.kr/main/bachelor/grade.do)
 - 재수강·소멸 과목은 학교 표시를 확인한 뒤 사용자가 결과를 검토해야 합니다.

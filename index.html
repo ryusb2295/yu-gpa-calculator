@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="urp.css?v=20261123_inferredmajor">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script defer src="app.js?v=20261123_inferredmajor"></script>
+  <script defer src="app.js?v=20261123_grademode"></script>
   <script defer src="shell.js?v=20261123_full"></script>
 </head>
 <body>
@@ -114,6 +114,8 @@
             </div>
 
             <div class="toolbar-card">
+              <label for="gpa-mode-select">성적 기준</label>
+              <select id="gpa-mode-select"><option value="cumulative">종합성적 (F 제외)</option><option value="semester">학기성적 (F 포함)</option></select>
               <label for="scale-select">만점 기준</label>
               <select id="scale-select"><option value="4.5" selected>4.5 만점 (A+=4.5, A0=4.0)</option><option value="4.3">4.3 만점 (A+=4.3, A0=4.0)</option><option value="4.0">4.0 만점 (A+=4.0, A0=4.0)</option></select>
               <div class="toolbar-right">

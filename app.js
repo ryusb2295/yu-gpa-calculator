@@ -2,7 +2,8 @@
 let state = {
   courses: [],
   scale: 4.5,
-  startYear: Number(localStorage.getItem("yu_gpa_start_year")) || 3
+  startYear: Number(localStorage.getItem("yu_gpa_start_year")) || 3,
+  gpaMode: localStorage.getItem("yu_gpa_gpa_mode") || "cumulative"
 };
 
 // Standard Grade Point Maps
@@ -29,6 +30,11 @@ const GRADE_MAPS = {
     "F": 0.0, "P": null, "NP": null
   }
 };
+
+function gradePointsForGpa(grade, gradeMap) {
+  if (grade === "F" && state.gpaMode === "cumulative") return null;
+  return gradeMap[grade];
+}
 
 // Dynamic Backend API URL Resolver for GitHub Pages & Cloudflare Tunnel
 let autoDetectedBackendUrl = "";
@@ -548,6 +554,15 @@ function addCourses(newCourses) {
 // Toolbar & Controls
 // Toolbar & Controls
 function initToolbar() {
+  const modeSelect = document.getElementById("gpa-mode-select");
+  if (modeSelect) {
+    modeSelect.value = state.gpaMode;
+    modeSelect.addEventListener("change", () => {
+      state.gpaMode = modeSelect.value;
+      localStorage.setItem("yu_gpa_gpa_mode", state.gpaMode);
+      renderApp();
+    });
+  }
   const scaleSelect = document.getElementById("scale-select");
   if (scaleSelect) {
     scaleSelect.addEventListener("change", (e) => {
@@ -630,7 +645,7 @@ function initToolbar() {
       let totalMajorPoints = 0, totalMajorCredits = 0;
       state.courses.forEach(c => {
         if (c.is_major) {
-          const pts = gradeMap[c.grade];
+          const pts = gradePointsForGpa(c.grade, gradeMap);
           if (pts !== null && pts !== undefined) {
             totalMajorPoints += pts * c.credits;
             totalMajorCredits += c.credits;
@@ -723,7 +738,7 @@ function initSimulator() {
     const gradeMap = GRADE_MAPS[state.scale] || GRADE_MAPS[4.5];
 
     majorCourses.forEach(c => {
-      const pts = gradeMap[c.grade];
+      const pts = gradePointsForGpa(c.grade, gradeMap);
       if (pts !== null && pts !== undefined) {
         curPoints += pts * c.credits;
         curCredits += c.credits;
@@ -764,7 +779,7 @@ function renderApp() {
   let overallTotalCredits = 0;
 
   state.courses.forEach(c => {
-    const pts = gradeMap[c.grade];
+    const pts = gradePointsForGpa(c.grade, gradeMap);
     const isP = c.grade === "P";
 
     // Count credits towards total completed credits if not F/NP
@@ -916,7 +931,7 @@ function getAcademicYearGroups(courses, scale) {
     };
 
     groupCourses.forEach(c => {
-      const pts = gradeMap[c.grade];
+      const pts = gradePointsForGpa(c.grade, gradeMap);
       if (c.grade !== "F" && c.grade !== "NP") {
         g.overallCreditsTotal += c.credits;
         if (c.is_major) g.majorCreditsTotal += c.credits;
@@ -955,7 +970,7 @@ function getAcademicYearGroups(courses, scale) {
         majorCourses: []
       };
       unassignedCourses.forEach(c => {
-        const pts = gradeMap[c.grade];
+        const pts = gradePointsForGpa(c.grade, gradeMap);
         if (c.grade !== "F" && c.grade !== "NP") {
           g.overallCreditsTotal += c.credits;
           if (c.is_major) g.majorCreditsTotal += c.credits;
@@ -1151,7 +1166,7 @@ function exportToExcel() {
   let overallPoints = 0, overallCreditsForGpa = 0, overallTotalCredits = 0;
 
   sortedCourses.forEach(c => {
-    const pts = gradeMap[c.grade];
+    const pts = gradePointsForGpa(c.grade, gradeMap);
     if (c.grade !== "F" && c.grade !== "NP") {
       overallTotalCredits += c.credits;
       if (c.is_major) majorTotalCredits += c.credits;

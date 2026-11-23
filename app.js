@@ -3,6 +3,7 @@ let state = {
   courses: [],
   scale: 4.5,
   startYear: Number(localStorage.getItem("yu_gpa_start_year")) || 3,
+  startCalendarYear: Number(localStorage.getItem("yu_gpa_start_calendar_year")) || 0,
   gpaMode: localStorage.getItem("yu_gpa_gpa_mode") || "cumulative"
 };
 
@@ -92,13 +93,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initStartYear() {
   const select = document.getElementById("start-year-select");
-  if (!select) return;
+  const yearInput = document.getElementById("start-calendar-year");
+  if (!select || !yearInput) return;
   select.value = String(state.startYear);
+  yearInput.value = state.startCalendarYear || "";
   select.addEventListener("change", () => {
     state.startYear = Number(select.value);
     localStorage.setItem("yu_gpa_start_year", String(state.startYear));
     renderYearBreakdown();
   });
+  yearInput.addEventListener("change", () => {
+    const year = Number(yearInput.value);
+    state.startCalendarYear = Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : 0;
+    yearInput.value = state.startCalendarYear || "";
+    if (state.startCalendarYear) localStorage.setItem("yu_gpa_start_calendar_year", String(state.startCalendarYear));
+    else localStorage.removeItem("yu_gpa_start_calendar_year");
+    renderYearBreakdown();
+  });
+}
+
+function getAcademicStartCalendarYear(courses) {
+  if (state.startCalendarYear) return state.startCalendarYear;
+  const transferYears = courses
+    .filter(c => /편입/.test(`${c.year_semester || ""} ${c.classification || ""} ${c.name || ""}`))
+    .map(c => Number((c.year_semester || "").match(/20\d{2}/)?.[0]))
+    .filter(Number.isFinite);
+  if (transferYears.length) return Math.min(...transferYears);
+  const years = courses.map(c => Number((c.year_semester || "").match(/20\d{2}/)?.[0])).filter(Number.isFinite);
+  return years.length ? Math.min(...years) : 0;
 }
 
 // Server Config Dialog
@@ -859,14 +881,17 @@ function renderApp() {
 }
 
 
-// Academic Year Counter Helper (Counts 1 academic year for every 2 completed semesters)
+// Group regular courses by calendar year, anchored to the transfer year when present.
 function getAcademicYearGroups(courses, scale) {
   const gradeMap = GRADE_MAPS[scale] || GRADE_MAPS[4.5];
+  const startCalendarYear = getAcademicStartCalendarYear(courses);
 
   // 1. Group courses by unique semester
   const semesterMap = {};
   courses.forEach(c => {
-    const semKey = c.year_semester && c.year_semester.trim() ? c.year_semester.trim() : "미지정";
+    const semKey = /편입/.test(`${c.year_semester || ""} ${c.classification || ""}`)
+      ? "편입 인정 학점"
+      : (c.year_semester && c.year_semester.trim() ? c.year_semester.trim() : "미지정");
     if (!semesterMap[semKey]) {
       semesterMap[semKey] = [];
     }
@@ -886,7 +911,7 @@ function getAcademicYearGroups(courses, scale) {
   }
 
   const validSems = Object.keys(semesterMap)
-    .filter(k => k !== "미지정")
+    .filter(k => k !== "미지정" && k !== "편입 인정 학점")
     .sort((a, b) => parseSemesterOrder(a) - parseSemesterOrder(b));
 
   const unassignedSems = Object.keys(semesterMap).filter(k => k === "미지정");
@@ -907,10 +932,15 @@ function getAcademicYearGroups(courses, scale) {
     bucket.sems.push(sk);
   });
 
-  yearBuckets.forEach((bucket, groupIdx) => {
+  yearBuckets.forEach(bucket => {
     const semList = bucket.sems;
-    const academicYear = state.startYear + groupIdx;
-    const yearLabel = academicYear <= 4 ? `${academicYear}학년` : `${academicYear}학년 (초과학기)`;
+    const calendarYear = Number(bucket.calendarYear);
+    const academicYear = state.startYear + calendarYear - startCalendarYear;
+    const yearLabel = !Number.isFinite(calendarYear)
+      ? "연도 미확인"
+      : calendarYear < startCalendarYear
+      ? (state.startYear === 3 ? "편입 전 성적" : "시작 연도 이전")
+      : (academicYear <= 4 ? `${academicYear}학년` : `${academicYear}학년 (초과학기)`);
     const semesterRangeStr = semList.length > 1 ? `${semList[0]} ~ ${semList[semList.length - 1]}` : (semList[0] || "");
 
     const groupCourses = [];
@@ -993,6 +1023,23 @@ function getAcademicYearGroups(courses, scale) {
     }
   }
 
+  const transferCourses = semesterMap["편입 인정 학점"] || [];
+  if (transferCourses.length) {
+    yearGroupList.push({
+      yearLabel: "편입 인정 학점",
+      semesterRangeStr: "평점 계산 제외",
+      majorCreditsTotal: 0,
+      majorCreditsGpa: 0,
+      majorPoints: 0,
+      overallCreditsTotal: transferCourses
+        .filter(c => c.grade !== "F" && c.grade !== "NP")
+        .reduce((sum, c) => sum + c.credits, 0),
+      overallCreditsGpa: 0,
+      overallPoints: 0,
+      majorCourses: [],
+    });
+  }
+
   return yearGroupList;
 }
 
@@ -1000,6 +1047,11 @@ function getAcademicYearGroups(courses, scale) {
 function renderYearBreakdown() {
   const grid = document.getElementById("year-breakdown-grid");
   if (!grid) return;
+  const startHint = document.getElementById("start-calendar-year-hint");
+  if (startHint) {
+    const year = getAcademicStartCalendarYear(state.courses);
+    startHint.textContent = year ? (state.startCalendarYear ? "직접 설정" : `자동: ${year}년`) : "";
+  }
 
   if (!state.courses || state.courses.length === 0) {
     grid.innerHTML = `
@@ -1037,7 +1089,7 @@ function renderYearBreakdown() {
               <td style="text-align:center; font-weight:700; color:var(--ink);">${ptsDisplay}</td>
             </tr>`;
         }).join('')
-      : `<tr><td colspan="4" style="text-align:center; color:var(--ink-3); padding:10px;">전공으로 분류된 과목이 없습니다. 과목 목록의 전공 여부를 확인하세요.</td></tr>`;
+      : `<tr><td colspan="4" style="text-align:center; color:var(--ink-3); padding:10px;">${data.yearLabel === "편입 인정 학점" ? "편입 인정 학점은 평점 계산에서 제외됩니다." : "전공으로 분류된 과목이 없습니다. 과목 목록의 전공 여부를 확인하세요."}</td></tr>`;
 
     return `
       <div class="year-card year-card-full">

@@ -80,6 +80,9 @@ h1, h2, h3, p { margin: 0; }
 .classification-note { margin: 0 0 5px; color: var(--ink-soft); font-size: 11px; }
 .year-start-control { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-soft); font-size: 12px; }
 .year-start-control select { width: auto; }
+.year-start-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
+.year-start-control input { width: 76px; }
+.year-start-hint { color: var(--ink-faint); font-size: 11px; }
 .urp-toolbar { display: flex; gap: 5px; flex-wrap: wrap; }
 .urp-statusbar { display: flex; flex: none; align-items: center; justify-content: space-between; height: 26px; padding: 0 10px; border-top: 1px solid var(--line-strong); background: var(--surface-sunk); color: var(--ink-soft); font-size: 11px; }
 

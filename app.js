@@ -1,7 +1,8 @@
 // State management
 let state = {
   courses: [],
-  scale: 4.5
+  scale: 4.5,
+  startYear: Number(localStorage.getItem("yu_gpa_start_year")) || 3
 };
 
 // Standard Grade Point Maps
@@ -80,7 +81,19 @@ document.addEventListener("DOMContentLoaded", () => {
   initToolbar();
   initSimulator();
   initServerConfig();
+  initStartYear();
 });
+
+function initStartYear() {
+  const select = document.getElementById("start-year-select");
+  if (!select) return;
+  select.value = String(state.startYear);
+  select.addEventListener("change", () => {
+    state.startYear = Number(select.value);
+    localStorage.setItem("yu_gpa_start_year", String(state.startYear));
+    renderYearBreakdown();
+  });
+}
 
 // Server Config Dialog
 function initServerConfig() {
@@ -217,7 +230,7 @@ function parseYuTextLocal(rawText) {
     if (!name || !Number.isFinite(credits) || credits <= 0 || !validGrades.has(grade)) continue;
     const classMap={"전필":"전공필수","전선":"전공선택","교필":"교양필수","교선":"교양선택","일선":"일반선택"};
     classification=classMap[classification] || classification || (/편입인정/.test(name) || /편입/.test(semester) ? "편입인정학점" : "미분류");
-    const isMajor=/전공핵심|전공선택|전공필수|전필|전선/.test(classification);
+    const isMajor=/전공|전필|전선/.test(classification);
     courses.push({id:Math.random().toString(36).slice(2,9),name,credits,grade,is_major:isMajor,classification,year_semester:`${year}년 ${normalizeYuSemester(semester)}`,code,retake});
   }
   return courses;
@@ -360,10 +373,6 @@ window.handleCrawl = async function() {
 
   if (submitBtn) submitBtn.disabled = true;
 
-  // 기존 성적 리스트 즉시 초기화
-  state.courses = [];
-  renderApp();
-
   const payload = {
     portal_url: portalUrl || "https://std.yu.ac.kr/",
     user_id: userId,
@@ -439,6 +448,7 @@ window.handleCrawl = async function() {
           statusIndicator.style.color = "#164a25";
         }
         if (finalResult.courses && finalResult.courses.length > 0) {
+          state.courses = [];
           addCourses(finalResult.courses);
         }
       } else {
@@ -474,6 +484,7 @@ window.handleCrawl = async function() {
           statusIndicator.style.color = "#164a25";
         }
         if (data.courses && data.courses.length > 0) {
+          state.courses = [];
           addCourses(data.courses);
         }
       } else {
@@ -504,8 +515,8 @@ function addCourses(newCourses) {
     const cls = c.classification || c.type || "";
     const name = c.name || "";
     // Any item containing '전공', '전필', '전선' is strictly treated as Major
-    const isMajor = c.is_major || 
-                    cls.includes("전공") || cls.includes("전필") || cls.includes("전선") || cls.includes("전공핵심") || 
+    const isMajor = typeof c.is_major === "boolean" ? c.is_major :
+                    cls.includes("전공") || cls.includes("전필") || cls.includes("전선") ||
                     name.includes("전공필수") || name.includes("전공선택");
     return {
       ...c,
@@ -539,6 +550,14 @@ function initToolbar() {
         state.courses = [];
         renderApp();
       }
+    });
+  }
+
+  const btnMarkAllMajor = document.getElementById("btn-mark-all-major");
+  if (btnMarkAllMajor) {
+    btnMarkAllMajor.addEventListener("click", () => {
+      state.courses = state.courses.map(c => ({ ...c, is_major: true }));
+      renderApp();
     });
   }
 
@@ -627,6 +646,23 @@ function initToolbar() {
   }
 
   // Import JSON
+  const btnSaveJson = document.getElementById("btn-save-json");
+  if (btnSaveJson) {
+    btnSaveJson.addEventListener("click", () => {
+      if (!state.courses.length) {
+        alert("백업할 성적 데이터가 없습니다.");
+        return;
+      }
+      const blob = new Blob([JSON.stringify(state.courses, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `전공성적백업_${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
   const fileInput = document.getElementById("file-import");
   const btnImport = document.getElementById("btn-import-json");
   if (btnImport && fileInput) {
@@ -754,7 +790,7 @@ function renderApp() {
         <td colspan="6">
           <div class="empty-state">
             <i class="fa-solid fa-folder-open"></i>
-            <p>등록된 과목이 없습니다.<br>왼쪽에서 포털 성적 수집, 텍스트 붙여넣기 또는 과목을 직접 추가해 보세요!</p>
+            <p>등록된 과목이 없습니다.<br>성적 입력에서 포털 수집, 텍스트 붙여넣기 또는 직접 입력을 이용하세요.</p>
           </div>
         </td>
       </tr>
@@ -766,7 +802,7 @@ function renderApp() {
     <tr>
       <td>
         <button type="button" class="toggle-major-btn ${c.is_major ? 'is-major' : 'not-major'}" onclick="toggleMajor('${c.id}')">
-          ${c.is_major ? '🌸 전공' : '📘 교양'}
+          ${c.is_major ? '전공' : '교양'}
         </button>
       </td>
       <td><strong>${escapeHtml(c.name)}</strong></td>
@@ -824,34 +860,25 @@ function getAcademicYearGroups(courses, scale) {
   const unassignedSems = Object.keys(semesterMap).filter(k => k === "미지정");
 
   const yearGroupList = [];
-  const yearLabels = ["1학년", "2학년", "3학년", "4학년", "5학년 (초과학기)", "6학년 (초과학기)"];
 
-  // 3. Group semesters by 2 regular semesters (1학기, 2학기) per academic year, including seasonal semesters
+  // Keep all semesters from the same calendar year together. Missing semesters
+  // must not cause the next year's first semester to join the previous year.
   const yearBuckets = [];
-  let currentBucket = { regularCount: 0, sems: [] };
-
   validSems.forEach(sk => {
-    const isRegular = sk.includes("1학기") || sk.includes("2학기");
-    currentBucket.sems.push(sk);
-
-    if (isRegular) {
-      currentBucket.regularCount += 1;
+    const match = sk.match(/(20\d{2})/);
+    const calendarYear = match ? match[1] : sk;
+    let bucket = yearBuckets[yearBuckets.length - 1];
+    if (!bucket || bucket.calendarYear !== calendarYear) {
+      bucket = { calendarYear, sems: [] };
+      yearBuckets.push(bucket);
     }
-
-    // When 2 regular semesters are completed, finalize this academic year bucket
-    if (currentBucket.regularCount >= 2) {
-      yearBuckets.push(currentBucket);
-      currentBucket = { regularCount: 0, sems: [] };
-    }
+    bucket.sems.push(sk);
   });
-
-  if (currentBucket.sems.length > 0) {
-    yearBuckets.push(currentBucket);
-  }
 
   yearBuckets.forEach((bucket, groupIdx) => {
     const semList = bucket.sems;
-    const yearLabel = groupIdx < yearLabels.length ? yearLabels[groupIdx] : `${groupIdx + 1}학년`;
+    const academicYear = state.startYear + groupIdx;
+    const yearLabel = academicYear <= 4 ? `${academicYear}학년` : `${academicYear}학년 (초과학기)`;
     const semesterRangeStr = semList.length > 1 ? `${semList[0]} ~ ${semList[semList.length - 1]}` : (semList[0] || "");
 
     const groupCourses = [];
@@ -978,7 +1005,7 @@ function renderYearBreakdown() {
               <td style="text-align:center; font-weight:700; color:var(--ink);">${ptsDisplay}</td>
             </tr>`;
         }).join('')
-      : `<tr><td colspan="4" style="text-align:center; color:var(--ink-3); padding:10px;">해당 학년 전공 과목 없음</td></tr>`;
+      : `<tr><td colspan="4" style="text-align:center; color:var(--ink-3); padding:10px;">전공으로 분류된 과목이 없습니다. 과목 목록의 전공 여부를 확인하세요.</td></tr>`;
 
     return `
       <div class="year-card year-card-full">

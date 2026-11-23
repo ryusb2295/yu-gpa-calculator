@@ -2,18 +2,18 @@ import asyncio
 import json
 import re
 import uuid
+from pathlib import Path
 from typing import List, Optional
 
 from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 app = FastAPI(title="Yeungnam University GPA Calculator API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
-app.mount("/static", StaticFiles(directory="static"), name="static")
+FRONTEND_DIR = Path(__file__).resolve().parent
 
 
 class Course(BaseModel):
@@ -53,23 +53,28 @@ class GoalSimulationRequest(BaseModel):
 
 
 GRADES = {"A+", "A0", "A", "B+", "B0", "B", "C+", "C0", "C", "D+", "D0", "D", "F", "P", "NP"}
-MAJOR_WORDS = ("전공핵심", "전공선택", "전공필수", "전필", "전선")
+MAJOR_WORDS = ("전공", "전필", "전선")
 CLASS_MAP = {"전필": "전공필수", "전선": "전공선택", "교필": "교양필수", "교선": "교양선택", "일선": "일반선택"}
 
 
 @app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
-@app.get("/style.css")
-async def css():
-    return FileResponse("static/style.css", media_type="text/css")
+@app.get("/urp.css")
+async def urp_css():
+    return FileResponse(FRONTEND_DIR / "urp.css", media_type="text/css")
+
+
+@app.get("/shell.js")
+async def shell_js():
+    return FileResponse(FRONTEND_DIR / "shell.js", media_type="application/javascript")
 
 
 @app.get("/app.js")
 async def javascript():
-    return FileResponse("static/app.js", media_type="application/javascript")
+    return FileResponse(FRONTEND_DIR / "app.js", media_type="application/javascript")
 
 
 @app.get("/health")
@@ -136,34 +141,97 @@ def parse_yu_text(raw: str) -> List[Course]:
 def extract_yu_courses(html: str) -> List[Course]:
     soup = BeautifulSoup(html, "html.parser")
     courses: List[Course] = []
+    header_map = {}
+    last_year = ""
+    last_semester = ""
+    header_names = {
+        "year": ("수강년도", "수강연도", "학년도", "년도", "연도"),
+        "semester": ("학기",),
+        "classification": ("이수구분", "교과구분", "교과목구분"),
+        "code": ("과목코드", "교과목코드", "과목번호", "교과목번호"),
+        "name": ("교과목명", "과목명"),
+        "credits": ("취득학점", "신청학점", "학점"),
+        "grade": ("성적등급", "등급", "성적"),
+    }
     for row in soup.select("tr"):
         cells = [cell.get_text(" ", strip=True) for cell in row.select(":scope > th, :scope > td")]
-        if len(cells) < 7 or not re.fullmatch(r"20\d{2}", cells[0]):
+        if not cells:
             continue
-        course = make_course(cells[0], cells[1], cells[2], cells[3], cells[4], cells[5], cells[6], " ".join(cells[7:]))
+        normalized = [re.sub(r"\s+", "", cell) for cell in cells]
+        if any("교과목명" in cell or cell == "과목명" for cell in normalized):
+            header_map = {
+                key: next((i for i, cell in enumerate(normalized) if any(name in cell for name in names)), None)
+                for key, names in header_names.items()
+            }
+            continue
+        course = None
+        if header_map.get("name") is not None and header_map.get("grade") is not None:
+            def field(key):
+                index = header_map.get(key)
+                return cells[index] if index is not None and index < len(cells) else ""
+            year = field("year") or last_year
+            semester = field("semester") or last_semester
+            if re.fullmatch(r"20\d{2}", year):
+                last_year, last_semester = year, semester
+                course = make_course(year, semester, field("classification"), field("code"),
+                                     field("name"), field("credits"), field("grade"))
+        elif len(cells) >= 7 and re.fullmatch(r"20\d{2}", cells[0]):
+            course = make_course(cells[0], cells[1], cells[2], cells[3], cells[4], cells[5], cells[6], " ".join(cells[7:]))
         if course:
             courses.append(course)
     return courses
 
 
 async def click_grade_menu(page, log):
-    keywords = ["성적관리", "성적조회", "전체성적조회", "누적성적조회", "학기별성적조회"]
-    for _ in range(2):
-        clicked = False
-        for frame in [page] + page.frames:
-            for keyword in keywords:
-                try:
-                    item = frame.get_by_text(keyword, exact=True).first
-                    if await item.count():
-                        await item.click(timeout=2000)
-                        await log(f"      - '{keyword}' 메뉴 선택")
-                        await asyncio.sleep(2)
-                        clicked = True
-                        break
-                except Exception:
-                    continue
-            if clicked:
-                break
+    # WebSquare menus are hierarchical: clicking the category again closes it.
+    async def click_visible(label):
+        for frame in page.frames:
+            try:
+                item = frame.get_by_text(label, exact=True).first
+                if await item.count() and await item.is_visible():
+                    await item.click(timeout=3000)
+                    return True
+            except Exception:
+                continue
+        return False
+
+    if await click_visible("성적관리"):
+        await log("      - 성적관리 메뉴 열기")
+        await asyncio.sleep(1)
+
+    history_labels = [
+        "전체성적조회", "전체학기성적조회", "기취득성적조회",
+        "누적성적조회", "학기별성적조회", "성적조회", "현학기성적조회",
+    ]
+    for label in history_labels:
+        if await click_visible(label):
+            await log(f"      - {label} 화면 열기")
+            await asyncio.sleep(2)
+            for frame in page.frames:
+                for button_label in ("조회", "검색"):
+                    try:
+                        button = frame.get_by_role("button", name=button_label, exact=True).first
+                        if await button.count() and await button.is_visible():
+                            await button.click(timeout=2000)
+                            await log(f"      - {button_label} 실행")
+                            return
+                    except Exception:
+                        continue
+            return
+    await log("      - 성적조회 하위 메뉴를 자동으로 찾지 못했습니다.")
+
+
+async def collect_visible_courses(page):
+    courses = []
+    for frame in page.frames:
+        try:
+            courses.extend(extract_yu_courses(await frame.content()))
+        except Exception:
+            continue
+    unique = {}
+    for course in courses:
+        unique[(course.year_semester, course.code, course.name)] = course
+    return list(unique.values())
 
 
 async def run_crawler_core(req: CrawlRequest, emit_log=None):
@@ -204,20 +272,22 @@ async def run_crawler_core(req: CrawlRequest, emit_log=None):
                 await page.goto(req.grade_url, wait_until="domcontentloaded", timeout=30000)
             elif req.auto_navigate_grade:
                 await click_grade_menu(page, log)
-            await asyncio.sleep(5)
             await log("📚 [4/4] 성적조회 표를 읽습니다.")
-            for frame in [page] + page.frames:
-                try:
-                    courses.extend(extract_yu_courses(await frame.content()))
-                except Exception:
-                    continue
-            unique = {}
-            for course in courses:
-                unique[(course.year_semester, course.code, course.name)] = course
-            courses = list(unique.values())
+            for _ in range(10):
+                courses = await collect_visible_courses(page)
+                if courses:
+                    break
+                await asyncio.sleep(1)
+            if not courses:
+                await log("⚠️ 자동 탐색에서 성적 행을 찾지 못했습니다. 열린 브라우저에서 성적관리 → 성적조회 화면으로 이동하고 조회 버튼을 누르세요. 90초 동안 기다립니다.")
+                for _ in range(45):
+                    courses = await collect_visible_courses(page)
+                    if courses:
+                        break
+                    await asyncio.sleep(2)
             await browser.close()
             if not courses:
-                message = "성적 행을 찾지 못했습니다. 붙여넣기 기능을 사용하거나 고급 설정에 성적 조회 URL을 입력해 주세요."
+                message = "성적 행을 찾지 못했습니다. 현재 화면의 성적표 구조를 확인해야 합니다."
                 await log(f"⚠️ {message}")
                 return {"success": False, "logs": logs, "courses": [], "error": message}
             await log(f"✅ {len(courses)}개 과목을 수집했습니다.")

@@ -1,363 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>영남대학교 전공 평점 자동 계산기 | YU GPA Calculator</title>
-  <!-- Google Fonts & Font Awesome Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=20260906_yu1">
-  <link rel="stylesheet" href="./style.css?v=20260906_yu1">
-  <!-- SheetJS for Excel (.xlsx) Export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>전공 평점 계산 | 영남대학교</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="urp.css?v=20261123_transfer">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="app.js?v=20261123_majorfix"></script>
+  <script defer src="shell.js?v=20261123_full"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <div class="brand">
-          <div class="brand-icon">🎓</div>
-          <div class="brand-text">
-            <h1>전공 평점 자동 계산기</h1>
-            <p>영남대 포털 자동 수집 · 학년별 전공 성적 분석</p>
-            <div class="security-notice-badge">
-              <i class="fa-solid fa-shield-halved"></i>
-              <span>아이디와 비밀번호는 서버에 일절 저장되지 않으며 로그인 완료 후 즉시 폐기됩니다. (전체 소스코드는 <a href="https://github.com/ryusb2295/yu-gpa-calculator" target="_blank" rel="noopener noreferrer" class="security-gh-link"><i class="fa-brands fa-github"></i> GitHub</a>에서 확인이 가능합니다)</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-meta">
-          <div class="preset-badge-group" style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn btn-outline btn-sm active" id="btn-preset-yu" style="font-size:0.78rem;">
-              🎓 영남대 포털
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-preset-generic" style="font-size:0.78rem;">
-              🏫 타 대학교
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-server-config" title="외부 백엔드 서버(Cloudflare) 연결 설정" style="font-size:0.78rem;background:var(--watch-paper);">
-              <span id="server-status-badge"><span style="color:#94a3b8;">○</span> 서버 연동</span>
-            </button>
-          </div>
-        </div>
-      </div>
+    <header class="urp-header">
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="메뉴 접기·펴기">
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </button>
+      <span class="urp-home" aria-hidden="true">
+        <svg viewBox="0 0 20 20" width="15" height="15"><path d="M3 10l7-6 7 6M5 9v7h4v-4h2v4h4V9" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </span>
+      <h1>전공 평점 계산</h1>
+      <span class="urp-header-subtitle">영남대학교 성적 분석</span>
+      <span class="urp-header-note">※ 영남대학교 학생종합정보시스템의 UI를 참고하여 제작되었습니다.</span>
     </header>
 
-    <!-- Server Connection Modal -->
-    <dialog id="server-config-dialog" class="sponsor-dialog" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;border:var(--border);border-radius:var(--radius);background:var(--paper);padding:24px;box-shadow:var(--shadow-lg);width:min(480px,90vw);">
-      <h2 style="font-family:var(--font-display);font-size:20px;margin-bottom:8px;">🔗 백엔드 서버(Cloudflare) 연동</h2>
-      <p style="font-size:12.5px;color:var(--ink-2);margin-bottom:14px;">
-        GitHub Pages(<span style="font-family:var(--font-mono);font-weight:700;">github.io</span>)에서 크롤러를 이용하려면 내 컴퓨터에서 실행한 Cloudflare Tunnel 주소를 입력해 주세요. (로컬 접속 시에는 비워두셔도 됩니다)
-      </p>
+    <div class="urp-shell">
+      <nav class="urp-sidebar" id="urp-sidebar" aria-label="계산기 메뉴">
+        <div class="urp-profile"><strong>성적 관리</strong><span>전공 평점 계산</span></div>
+        <div class="urp-menu-switch"><span>메뉴정보</span><span>전체보기</span></div>
+        <div class="urp-menu-group">
+          <div class="urp-menu-heading">성적 관리</div>
+          <button type="button" class="urp-menu-link active" data-scroll-target="input-panel">성적 입력</button>
+          <button type="button" class="urp-menu-link" data-scroll-target="metrics-grid">평점 조회</button>
+          <button type="button" class="urp-menu-link" data-scroll-target="year-breakdown-card">학년별 전공 분석</button>
+          <button type="button" class="urp-menu-link" data-scroll-target="table-card">과목 성적 목록</button>
+          <button type="button" class="urp-menu-link" data-scroll-target="simulator-card">목표 평점 계산</button>
+        </div>
+      </nav>
 
-      <div class="form-group">
-        <label for="input-backend-url">Cloudflare Tunnel 주소 (예: https://xxxx.trycloudflare.com)</label>
-        <input type="url" id="input-backend-url" placeholder="https://xxxx.trycloudflare.com">
+      <div class="urp-content">
+        <div class="urp-docbar">
+          <span class="urp-doc-tab">전공 평점 계산</span>
+          <span class="urp-docbar-path">성적 관리 &gt; 전공 평점 계산</span>
+        </div>
+        <main class="urp-page" id="urp-page">
+          <div class="urp-page-heading">
+            <h2>전공 평점 계산</h2>
+            <div class="urp-toolbar">
+              <button type="button" class="btn btn-outline btn-sm active" id="btn-preset-yu">영남대 포털</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-preset-generic">타 대학교</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-server-config"><span id="server-status-badge">서버 연동</span></button>
+            </div>
+          </div>
+
+          <section class="input-panel" id="input-panel" aria-labelledby="input-title">
+            <div class="section-heading"><h2 id="input-title">성적 입력</h2><p>성적을 가져오거나 직접 입력하세요.</p></div>
+            <div class="tab-header" role="tablist" aria-label="입력 방식">
+              <button type="button" class="tab-btn active" data-tab="tab-crawl">자동 수집</button>
+              <button type="button" class="tab-btn" data-tab="tab-paste">붙여넣기</button>
+              <button type="button" class="tab-btn" data-tab="tab-manual">직접 입력</button>
+            </div>
+
+            <div class="tab-content active" id="tab-crawl">
+              <form id="crawl-form">
+                <div class="field-table">
+                  <div class="form-group"><label for="portal_url">포털 로그인 주소</label><input type="url" id="portal_url" required value="https://std.yu.ac.kr/"></div>
+                  <div class="form-group"><label for="user_id">학번 / 아이디</label><input type="text" id="user_id" autocomplete="username" required></div>
+                  <div class="form-group"><label for="password">비밀번호</label><input type="password" id="password" autocomplete="current-password" required></div>
+                </div>
+                <button type="button" class="advanced-toggle" id="toggle-advanced" aria-expanded="false"><span>고급 선택자 설정</span><span id="adv-chevron">▾</span></button>
+                <div class="advanced-section hidden" id="advanced-section">
+                  <div class="field-table">
+                    <div class="form-group"><label for="id_selector">아이디 선택자</label><input type="text" id="id_selector" value="input[name='id'], input[name='userId'], #id, #userId, #user_id, input[type='text']"></div>
+                    <div class="form-group"><label for="pw_selector">비밀번호 선택자</label><input type="text" id="pw_selector" value="input[name='pw'], input[name='password'], #pw, #password, #user_pw, input[type='password']"></div>
+                    <div class="form-group"><label for="login_btn_selector">로그인 버튼 선택자</label><input type="text" id="login_btn_selector" value="button[type='submit'], input[type='submit'], #loginBtn, .login_btn, #btn_login, button:has-text('로그인')"></div>
+                    <div class="form-group"><label for="grade_url">성적조회 URL</label><input type="text" id="grade_url" placeholder="선택 사항"></div>
+                  </div>
+                </div>
+                <div class="form-actions"><button type="button" class="btn btn-primary" id="btn-submit-crawl">성적 자동 수집 시작</button></div>
+              </form>
+              <p class="security-notice-badge">아이디와 비밀번호는 서버에 저장되지 않으며 로그인 완료 후 폐기됩니다. <a href="https://github.com/ryusb2295/yu-gpa-calculator" target="_blank" rel="noopener noreferrer" class="security-gh-link">소스코드 보기</a></p>
+              <div class="terminal-card hidden" id="terminal-card"><div class="terminal-header"><span>진행 로그</span><span class="status-indicator" id="status-indicator">실행 중</span></div><pre class="terminal-body" id="terminal-body">대기 중</pre></div>
+            </div>
+
+            <div class="tab-content" id="tab-paste">
+              <div class="field-table"><div class="form-group"><label for="paste-text">성적표 텍스트</label><textarea id="paste-text" rows="10" placeholder="포털 성적조회 화면의 표를 복사해 붙여넣으세요."></textarea></div></div>
+              <div class="form-actions"><button type="button" class="btn btn-primary" id="btn-parse-text">성적 반영</button></div>
+            </div>
+
+            <div class="tab-content" id="tab-manual">
+              <form id="manual-form">
+                <div class="field-table">
+                  <div class="form-group"><label for="m-name">과목명</label><input type="text" id="m-name" required></div>
+                  <div class="form-group"><label for="m-credits">학점</label><select id="m-credits"><option value="3.0" selected>3.0</option><option value="2.0">2.0</option><option value="1.0">1.0</option><option value="4.0">4.0</option></select></div>
+                  <div class="form-group"><label for="m-grade">성적</label><select id="m-grade"><option>A+</option><option>A0</option><option>B+</option><option>B0</option><option>C+</option><option>C0</option><option>D+</option><option>D0</option><option>F</option><option>P</option></select></div>
+                  <div class="form-group"><label for="m-class">이수구분</label><select id="m-class"><option value="전공핵심" selected>전공핵심</option><option value="전공선택">전공선택</option><option value="전공필수">전공필수</option><option value="교양필수">교양필수</option><option value="교양선택">교양선택</option><option value="일반선택">일반선택</option><option value="편입인정학점">편입인정학점</option></select></div>
+                  <div class="form-group"><label for="m-is-major">전공 반영</label><label class="inline-check"><input type="checkbox" id="m-is-major" checked>전공 평점에 포함</label></div>
+                </div>
+                <div class="form-actions"><button type="button" class="btn btn-primary" id="btn-manual-add">과목 추가</button></div>
+              </form>
+            </div>
+          </section>
+
+          <section class="dashboard" aria-label="평점 분석">
+            <div class="section-heading"><h2>평점 조회</h2></div>
+            <div class="metrics-grid" id="metrics-grid">
+              <table class="summary-table"><tbody>
+                <tr><th scope="row">전공 평점</th><td class="num"><strong id="val-major-gpa">0.00</strong> <span id="scale-display-1">/ 4.50</span></td><th scope="row">전체 평점</th><td class="num"><strong id="val-overall-gpa">0.00</strong> <span id="scale-display-2">/ 4.50</span></td></tr>
+                <tr><th scope="row">전공 이수</th><td id="val-major-credits-info">전공 이수: <strong>0</strong> 학점</td><th scope="row">총 이수</th><td id="val-overall-credits-info">총 이수: <strong>0</strong> 학점</td></tr>
+              </tbody></table>
+            </div>
+
+            <div class="toolbar-card">
+              <label for="scale-select">만점 기준</label>
+              <select id="scale-select"><option value="4.5" selected>4.5 만점 (A+=4.5, A0=4.0)</option><option value="4.3">4.3 만점 (A+=4.3, A0=4.0)</option><option value="4.0">4.0 만점 (A+=4.0, A0=4.0)</option></select>
+              <div class="toolbar-right">
+                <button type="button" class="btn btn-sm" id="btn-load-sample">예시 데이터</button>
+                <button type="button" class="btn btn-sm" id="btn-export-excel">Excel 다운로드</button>
+                <button type="button" class="btn btn-sm" id="btn-export-json">텍스트 요약 다운로드</button>
+                <button type="button" class="btn btn-sm" id="btn-save-json">JSON 백업</button>
+                <button type="button" class="btn btn-sm" id="btn-import-json">불러오기</button>
+                <input type="file" id="file-import" accept=".json" class="hidden">
+              </div>
+            </div>
+
+            <section class="year-breakdown-card" id="year-breakdown-card" aria-labelledby="year-title">
+              <div class="section-heading"><h2 id="year-title">학년별 전공 분석</h2><label class="year-start-control" for="start-year-select">첫 성적 학년 <select id="start-year-select"><option value="1">1학년 (신입학)</option><option value="2">2학년</option><option value="3" selected>3학년 (편입학)</option><option value="4">4학년</option></select></label></div>
+              <div class="year-grid" id="year-breakdown-grid"><div class="empty-year-state">등록된 과목이 없습니다.</div></div>
+            </section>
+
+            <section class="table-card" id="table-card" aria-labelledby="course-title">
+              <div class="section-heading"><h2 id="course-title">과목 성적 목록 (<span id="course-count">0</span>)</h2><div class="section-actions"><button type="button" class="btn btn-sm" id="btn-mark-all-major">전체 전공으로 지정</button><button type="button" class="btn btn-sm btn-danger" id="btn-clear-all">전체 삭제</button></div></div>
+              <div class="table-responsive"><table class="course-table"><thead><tr><th>전공 여부</th><th>과목명</th><th>이수학점</th><th>성적</th><th>이수구분</th><th>관리</th></tr></thead><tbody id="course-table-body"><tr class="empty-row"><td colspan="6">등록된 과목이 없습니다.</td></tr></tbody></table></div>
+            </section>
+
+            <section class="simulator-card" id="simulator-card" aria-labelledby="sim-title">
+              <div class="section-heading"><h2 id="sim-title">목표 전공 평점 계산</h2></div>
+              <div class="field-table">
+                <div class="form-group"><label for="sim-target-gpa">목표 전공 평점</label><input type="number" id="sim-target-gpa" step="0.05" min="0" max="4.5" value="4.00"></div>
+                <div class="form-group"><label for="sim-remaining-credits">남은 전공 학점</label><input type="number" id="sim-remaining-credits" step="1" min="1" max="100" value="18"></div>
+              </div>
+              <div class="form-actions"><button type="button" class="btn btn-primary" id="btn-run-simulation">계산하기</button></div>
+              <div class="simulation-result hidden" id="sim-result-box"><div class="result-text" id="sim-result-text"></div></div>
+            </section>
+          </section>
+        </main>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
-        <button type="button" class="btn btn-outline btn-sm" id="btn-close-server-config">닫기</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-save-server-config">저장하기</button>
-      </div>
-    </dialog>
-
-    <!-- Main Content Grid -->
-    <main class="main-layout">
-      <!-- Left: Input Panel -->
-      <section class="input-panel">
-        <div class="tab-header">
-          <button type="button" class="tab-btn active" data-tab="tab-crawl">
-            <i class="fa-solid fa-robot"></i> 자동 수집
-          </button>
-          <button type="button" class="tab-btn" data-tab="tab-paste">
-            <i class="fa-solid fa-paste"></i> 붙여넣기
-          </button>
-          <button type="button" class="tab-btn" data-tab="tab-manual">
-            <i class="fa-solid fa-pen-to-square"></i> 직접 입력
-          </button>
-        </div>
-
-        <!-- Tab 1: Crawling -->
-        <div class="tab-content active" id="tab-crawl">
-          <form id="crawl-form">
-            <div class="form-group">
-              <label for="portal_url"><i class="fa-solid fa-link"></i> 포털 로그인 주소 (URL)</label>
-              <input type="url" id="portal_url" required value="https://std.yu.ac.kr/" placeholder="https://std.yu.ac.kr/">
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="user_id"><i class="fa-solid fa-user"></i> 학번 / 아이디</label>
-                <input type="text" id="user_id" placeholder="학번 또는 아이디 입력" required>
-              </div>
-              <div class="form-group">
-                <label for="password"><i class="fa-solid fa-key"></i> 비밀번호</label>
-                <input type="password" id="password" placeholder="비밀번호 입력" required>
-              </div>
-            </div>
-
-            <div class="advanced-toggle" id="toggle-advanced">
-              <span><i class="fa-solid fa-gears"></i> 고급 셀렉터 설정 (필요 시 수정)</span>
-              <i class="fa-solid fa-chevron-down" id="adv-chevron"></i>
-            </div>
-
-            <div class="advanced-section hidden" id="advanced-section">
-              <div class="form-group">
-                <label for="id_selector">아이디 입력창 CSS Selector</label>
-                <input type="text" id="id_selector" value="input[name='id'], input[name='userId'], #id, #userId, #user_id, input[type='text']">
-              </div>
-              <div class="form-group">
-                <label for="pw_selector">비밀번호 입력창 CSS Selector</label>
-                <input type="text" id="pw_selector" value="input[name='pw'], input[name='password'], #pw, #password, #user_pw, input[type='password']">
-              </div>
-              <div class="form-group">
-                <label for="login_btn_selector">로그인 버튼 CSS Selector</label>
-                <input type="text" id="login_btn_selector" value="button[type='submit'], input[type='submit'], #loginBtn, .login_btn, #btn_login, button:has-text('로그인')">
-              </div>
-              <div class="form-group">
-                <label for="grade_url">성적 조회 페이지 URL (선택)</label>
-                <input type="text" id="grade_url" placeholder="로그인 후 성적 페이지가 별도 URL인 경우 입력">
-              </div>
-            </div>
-
-            <div class="form-row form-actions" style="justify-content: flex-end;">
-              <button type="button" class="btn btn-primary" id="btn-submit-crawl">
-                <i class="fa-solid fa-paper-plane"></i> 성적 자동 수집 시작
-              </button>
-            </div>
-
-            <div class="info-alert-box" style="margin-top: 14px; padding: 14px 16px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; font-size: 0.82rem; color: #a5b4fc; line-height: 1.7;">
-              <div style="font-weight: 700; margin-bottom: 8px; color: #c7d2fe;"><i class="fa-solid fa-circle-info"></i> 성적 자동 수집 동작 방식</div>
-              <ol style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
-                <li>입력한 학번과 비밀번호로 <strong>영남대 포털에 자동 로그인</strong>합니다.</li>
-                <li>포털 내 <strong>성적 조회 페이지</strong>로 자동 이동하여 전체 수강 내역을 수집합니다.</li>
-                <li>P/NP 및 편입인정학점을 평점에서 분리하고 <strong>전공핵심·전공선택을 전공 평점에 포함</strong>합니다.</li>
-                <li>수집된 과목 데이터를 파싱하여 <strong>오른쪽 성적 리스트와 학년별 분석 카드</strong>에 즉시 반영합니다.</li>
-              </ol>
-            </div>
-          </form>
-
-          <!-- Live Terminal Output Log -->
-          <div class="terminal-card hidden" id="terminal-card">
-            <div class="terminal-header">
-              <span><i class="fa-solid fa-terminal"></i> 크롤링 실시간 진행 로그</span>
-              <span class="status-indicator" id="status-indicator">실행 중...</span>
-            </div>
-            <pre class="terminal-body" id="terminal-body">대기 중...</pre>
-          </div>
-        </div>
-
-        <!-- Tab 2: Text Paste -->
-        <div class="tab-content" id="tab-paste">
-          <div class="form-group">
-            <label for="paste-text"><i class="fa-solid fa-clipboard"></i> 성적표 텍스트 / 표 붙여넣기</label>
-            <textarea id="paste-text" rows="8" placeholder="학교 포털 성적 조회 페이지에서 전체 성적 표를 복사(Ctrl+C)하여 여기에 붙여넣으세요 (Ctrl+V)...&#10;&#10;예시:&#10;2025  1  전공핵심  INC002  논리회로  3  B+  3.5&#10;2025  2  전공선택  INC013  컴퓨터네트워크  3  C+  2.5"></textarea>
-          </div>
-          <button type="button" class="btn btn-secondary btn-block" id="btn-parse-text">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 텍스트 파싱 및 성적표 반영
-          </button>
-        </div>
-
-        <!-- Tab 3: Manual Input -->
-        <div class="tab-content" id="tab-manual">
-          <form id="manual-form">
-            <div class="form-row">
-              <div class="form-group flex-2">
-                <label>과목명</label>
-                <input type="text" id="m-name" placeholder="예: 데이터베이스" required>
-              </div>
-              <div class="form-group flex-1">
-                <label>학점</label>
-                <select id="m-credits">
-                  <option value="3.0" selected>3.0</option>
-                  <option value="2.0">2.0</option>
-                  <option value="1.0">1.0</option>
-                  <option value="4.0">4.0</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>성적</label>
-                <select id="m-grade">
-                  <option value="A+">A+</option>
-                  <option value="A0">A0</option>
-                  <option value="B+">B+</option>
-                  <option value="B0">B0</option>
-                  <option value="C+">C+</option>
-                  <option value="C0">C0</option>
-                  <option value="D+">D+</option>
-                  <option value="D0">D0</option>
-                  <option value="F">F</option>
-                  <option value="P">P (Pass)</option>
-                </select>
-              </div>
-              <div class="form-group flex-1">
-                <label>이수구분</label>
-                <select id="m-class">
-                  <option value="전공핵심" selected>전공핵심</option>
-                  <option value="전공선택">전공선택</option>
-                  <option value="전공필수">전공필수</option>
-                  <option value="교양필수">교양필수</option>
-                  <option value="교양선택">교양선택</option>
-                  <option value="일반선택">일반선택</option>
-                  <option value="편입인정학점">편입인정학점</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row form-actions">
-              <label class="checkbox-label">
-                <input type="checkbox" id="m-is-major" checked>
-                <span>전공 평점에 포함</span>
-              </label>
-              <button type="button" id="btn-manual-add" class="btn btn-success">
-                <i class="fa-solid fa-plus"></i> 과목 추가
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- Right Column: Dashboard & Grade Summary -->
-      <section class="dashboard">
-        <!-- Top Metrics Cards -->
-        <div class="metrics-grid">
-          <div class="metric-card highlight-card">
-            <div class="metric-header">
-              <span class="metric-title">🌟 전공 평점 (Major GPA)</span>
-              <span class="badge badge-pink">Major</span>
-            </div>
-            <div class="metric-value-group">
-              <span class="metric-value" id="val-major-gpa">0.00</span>
-              <span class="metric-scale" id="scale-display-1">/ 4.50</span>
-            </div>
-            <div class="metric-footer" id="val-major-credits-info">
-              전공 이수: <strong>0</strong> 학점
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-title">📊 전체 평점 (Overall GPA)</span>
-              <span class="badge badge-purple">Total</span>
-            </div>
-            <div class="metric-value-group">
-              <span class="metric-value" id="val-overall-gpa">0.00</span>
-              <span class="metric-scale" id="scale-display-2">/ 4.50</span>
-            </div>
-            <div class="metric-footer" id="val-overall-credits-info">
-              총 이수: <strong>0</strong> 학점
-            </div>
-          </div>
-        </div>
-
-        <!-- Controls Toolbar (Moved directly below top metrics) -->
-        <div class="toolbar-card">
-          <div class="toolbar-left">
-            <label for="scale-select"><i class="fa-solid fa-sliders"></i> 만점 기준:</label>
-            <select id="scale-select">
-              <option value="4.5" selected>4.5 만점 (A+=4.5, A0=4.0)</option>
-              <option value="4.3">4.3 만점 (A+=4.3, A0=4.0)</option>
-              <option value="4.0">4.0 만점 (A+=4.0, A0=4.0)</option>
-            </select>
-          </div>
-          <div class="toolbar-right">
-            <button type="button" class="btn btn-outline btn-sm" id="btn-load-sample">
-              <i class="fa-solid fa-vial"></i> 예시 데이터
-            </button>
-            <button type="button" class="btn btn-sm" id="btn-export-excel" style="background:#0c4da2;border:1.5px solid #08336c;color:#ffffff;font-weight:700;box-shadow:2px 2px 0 #08336c;" title="삼성 채용 성적입력용 Excel (.xlsx) 다운로드">
-              <i class="fa-solid fa-file-excel"></i> 📊 Excel 내보내기 (삼성)
-            </button>
-            <button type="button" class="btn btn-sm" id="btn-export-json" style="background:#e13b00;border:1.5px solid #a82b00;color:#ffffff;font-weight:700;box-shadow:2px 2px 0 #a82b00;" title="SK하이닉스 채용 성적입력용 텍스트 (.txt) 요약본 다운로드">
-              <i class="fa-solid fa-file-lines"></i> 📄 텍스트 요약 (하이닉스)
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btn-import-json">
-              <i class="fa-solid fa-file-import"></i> 불러오기
-            </button>
-            <input type="file" id="file-import" accept=".json" class="hidden">
-          </div>
-        </div>
-
-        <!-- Academic Year Major Breakdown Card -->
-        <div class="card year-breakdown-card">
-          <div class="year-breakdown-header">
-            <h3><i class="fa-solid fa-graduation-cap"></i> 학년별 전공 이수학점 및 전공 평점 분석</h3>
-            <span class="badge badge-pink">Major by Year</span>
-          </div>
-          <div class="year-grid" id="year-breakdown-grid">
-            <div class="empty-year-state">
-              <p>등록된 과목이 없어 학년별 분석 데이터가 표시되지 않습니다.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Course Table -->
-        <div class="card table-card">
-          <div class="table-header">
-            <h3><i class="fa-solid fa-list-check"></i> 과목 성적 리스트 (<span id="course-count">0</span>개 과목)</h3>
-            <button type="button" class="btn btn-danger btn-sm" id="btn-clear-all">
-              <i class="fa-solid fa-trash-can"></i> 전체 삭제
-            </button>
-          </div>
-          <div class="table-responsive">
-            <table class="course-table">
-              <thead>
-                <tr>
-                  <th style="width: 100px;">전공 여부</th>
-                  <th>과목명</th>
-                  <th style="width: 90px;">이수학점</th>
-                  <th style="width: 130px;">성적</th>
-                  <th style="width: 110px;">이수구분</th>
-                  <th style="width: 80px;">관리</th>
-                </tr>
-              </thead>
-              <tbody id="course-table-body">
-                <tr class="empty-row">
-                  <td colspan="6">
-                    <div class="empty-state">
-                      <i class="fa-solid fa-folder-open"></i>
-                      <p>등록된 과목이 없습니다.<br>왼쪽에서 포털 성적 수집, 텍스트 붙여넣기 또는 과목을 직접 추가해 보세요!</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Goal Simulator Card -->
-        <div class="card simulator-card">
-          <div class="simulator-header">
-            <h3><i class="fa-solid fa-bullseye"></i> 🎯 목표 전공 평점 달성 시뮬레이터</h3>
-          </div>
-          <div class="simulator-body">
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label for="sim-target-gpa">목표 전공 평점</label>
-                <input type="number" id="sim-target-gpa" step="0.05" min="0" max="4.5" value="4.00">
-              </div>
-              <div class="form-group flex-1">
-                <label for="sim-remaining-credits">남은 전공 이수 필요 학점</label>
-                <input type="number" id="sim-remaining-credits" step="1" min="1" max="100" value="18">
-              </div>
-              <div class="form-group flex-initial" style="display: flex; align-items: flex-end;">
-                <button type="button" class="btn btn-primary" id="btn-run-simulation">
-                  <i class="fa-solid fa-calculator"></i> 계산하기
-                </button>
-              </div>
-            </div>
-            <div class="simulation-result hidden" id="sim-result-box">
-              <div class="result-icon"><i class="fa-solid fa-lightbulb"></i></div>
-              <div class="result-text" id="sim-result-text">계산 결과가 여기에 표시됩니다.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+    </div>
+    <footer class="urp-statusbar"><span>준비되었습니다.</span><span>전공 평점 계산</span></footer>
   </div>
 
-  <script src="app.js?v=20260906_yu1"></script>
+  <dialog id="server-config-dialog" class="server-dialog">
+    <h2>백엔드 서버 연동</h2>
+    <p>외부 서버에서 자동 수집을 사용하려면 Cloudflare Tunnel 주소를 입력하세요.</p>
+    <label for="input-backend-url">서버 주소</label>
+    <input type="url" id="input-backend-url" placeholder="https://xxxx.trycloudflare.com">
+    <div class="dialog-actions"><button type="button" class="btn" id="btn-close-server-config">닫기</button><button type="button" class="btn btn-primary" id="btn-save-server-config">저장하기</button></div>
+  </dialog>
 </body>
 </html>
